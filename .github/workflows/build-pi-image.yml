@@ -1,0 +1,54 @@
+name: Build Raspberry Pi Image
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y coreutils quilt parted qemu-user-static debootstrap zerofree zip \
+          dosfstools libarchive-tools libcap2-bin grep rsync xz-utils file git curl bc \
+          gpg pigz xxd arch-test bmap-tools
+
+      - name: Create config file
+        run: |
+          cat > config << EOF
+          IMG_NAME="raspios-custom"
+          RELEASE="bookworm"
+          TARGET_HOSTNAME="pizero"
+          FIRST_USER_NAME="pi"
+          FIRST_USER_PASS="raspberry"
+          ENABLE_SSH=1
+          LOCALE_DEFAULT="en_US.UTF-8"
+          KEYBOARD_KEYMAP="us"
+          KEYBOARD_LAYOUT="English (US)"
+          TIMEZONE_DEFAULT="America/New_York"
+          STAGE_LIST="stage0 stage1 stage2"
+          # Uncomment the following line to enable Wi-Fi on first boot
+          # WPA_COUNTRY="US"
+          EOF
+
+      - name: Build Raspberry Pi image
+        run: |
+          # Create SKIP files for stages we don't need
+          touch ./stage3/SKIP ./stage4/SKIP ./stage5/SKIP
+          touch ./stage3/SKIP_IMAGES ./stage4/SKIP_IMAGES ./stage5/SKIP_IMAGES
+          
+          # Run the build script
+          sudo ./build.sh -c config
+        
+      - name: Upload image
+        uses: actions/upload-artifact@v3
+        with:
+          name: raspberry-pi-image
+          path: deploy/*
+          retention-days: 7
