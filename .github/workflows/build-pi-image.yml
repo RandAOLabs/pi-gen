@@ -28,13 +28,13 @@ jobs:
           FIRST_USER_NAME="pi"
           FIRST_USER_PASS="raspberry"
           ENABLE_SSH=1
+          DISABLE_FIRST_BOOT_USER_RENAME=1
           LOCALE_DEFAULT="en_US.UTF-8"
           KEYBOARD_KEYMAP="us"
           KEYBOARD_LAYOUT="English (US)"
           TIMEZONE_DEFAULT="America/New_York"
           STAGE_LIST="stage0 stage1 stage2"
-          # Uncomment the following line to enable Wi-Fi on first boot
-          # WPA_COUNTRY="US"
+          WPA_COUNTRY="US"
           EOF
 
       - name: Build Raspberry Pi image
