@@ -1,0 +1,1 @@
+deb [arch=armhf signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian RELEASE stable
