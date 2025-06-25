@@ -19,16 +19,44 @@ mkdir -p /opt/pifigo/lang
 # Download and extract the pifigo release
 cd /tmp
 wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-manual1/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
-tar -xzvf pifigo-v0.0.1-manual1_linux_armv7.tar.gz -C /tmp
+tar -xzvf pifigo-v0.0.1-manual1_linux_armv7.tar.gz
 
 # Copy the binary to the installation directory
-cp /tmp/pifigo /opt/pifigo/bin/
+cp /tmp/pifigo-v0.0.1-manual1_linux_armv7/pifigo /opt/pifigo/bin/
 chmod +x /opt/pifigo/bin/pifigo
 
-# Copy config and assets from the git repo
-cp /root/pifigo/config.toml /opt/pifigo/
-cp -r /root/pifigo/lang/* /opt/pifigo/lang/
-cp -r /root/pifigo/cmd/pifigo/assets/* /opt/pifigo/assets/
+# Create default config.toml if it doesn't exist in repo
+echo "Creating default config if needed..."
+if [ ! -f "/root/pifigo/config.toml" ]; then
+    echo "Creating default config.toml..."
+    cat > /opt/pifigo/config.toml << EOF
+# Pifigo Configuration
+title = "Pifigo"
+port = 8080
+
+[server]
+address = "0.0.0.0"
+EOF
+else
+    cp /root/pifigo/config.toml /opt/pifigo/
+fi
+
+# Create language and asset dirs if they don't exist
+echo "Setting up language and assets..."
+mkdir -p /opt/pifigo/lang
+mkdir -p /opt/pifigo/assets
+
+# Copy lang files if they exist
+if [ -d "/root/pifigo/lang" ] && [ "$(ls -A /root/pifigo/lang)" ]; then
+    cp -r /root/pifigo/lang/* /opt/pifigo/lang/
+fi
+
+# Copy assets if they exist
+if [ -d "/root/pifigo/cmd/pifigo/assets" ] && [ "$(ls -A /root/pifigo/cmd/pifigo/assets)" ]; then
+    cp -r /root/pifigo/cmd/pifigo/assets/* /opt/pifigo/assets/
+elif [ -d "/root/pifigo/assets" ] && [ "$(ls -A /root/pifigo/assets)" ]; then
+    cp -r /root/pifigo/assets/* /opt/pifigo/assets/
+fi
 
 # Create a systemd service to start pifigo on boot
 cat > /etc/systemd/system/pifigo.service << EOL
@@ -54,5 +82,12 @@ EOL
 # Enable the service to start on boot
 systemctl enable pifigo.service
 
-# Cleanup
+# Cleanup temporary files
 rm -f /tmp/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
+rm -rf /tmp/pifigo-v0.0.1-manual1_linux_armv7
+
+# Print success message
+echo "Pifigo and Randomness-Provider have been successfully installed."
+echo "Pifigo service has been set to start on boot."
+echo "Pifigo installed in: /opt/pifigo"
+echo "Randomness-Provider installed in: /root/Randomness-Provider"
