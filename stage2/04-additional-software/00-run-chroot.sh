@@ -18,11 +18,31 @@ mkdir -p /opt/pifigo/lang
 
 # Download and extract the pifigo release
 cd /tmp
-wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-manual1/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
-tar -xzvf pifigo-v0.0.1-manual1_linux_armv7.tar.gz
+wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-test4/pifigo-installer-0.0.1-test4.tar.gz
+tar -xzvf pifigo-installer-0.0.1-test4.tar.gz
 
-# Copy the binary to the installation directory
-cp /tmp/pifigo-v0.0.1-manual1_linux_armv7/pifigo /opt/pifigo/bin/
+# Check the directory structure after extraction
+ls -la /tmp
+find /tmp -name "pifigo" -type f
+
+# Copy the binary to the installation directory (adjusting path based on actual structure)
+if [ -f "/tmp/pifigo" ]; then
+    cp /tmp/pifigo /opt/pifigo/bin/
+elif [ -f "/tmp/pifigo-installer-0.0.1-test4/pifigo" ]; then
+    cp /tmp/pifigo-installer-0.0.1-test4/pifigo /opt/pifigo/bin/
+elif [ -f "/tmp/pifigo_linux_armv7/pifigo" ]; then
+    cp /tmp/pifigo_linux_armv7/pifigo /opt/pifigo/bin/
+else
+    # Look for the binary in any subdirectory
+    PIFIGO_PATH=$(find /tmp -name "pifigo" -type f | head -1)
+    if [ -n "$PIFIGO_PATH" ]; then
+        cp "$PIFIGO_PATH" /opt/pifigo/bin/
+    else
+        echo "ERROR: Could not find pifigo binary in extracted files!"
+        exit 1
+    fi
+fi
+
 chmod +x /opt/pifigo/bin/pifigo
 
 # Create default config.toml if it doesn't exist in repo
@@ -83,8 +103,9 @@ EOL
 systemctl enable pifigo.service
 
 # Cleanup temporary files
-rm -f /tmp/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
-rm -rf /tmp/pifigo-v0.0.1-manual1_linux_armv7
+rm -f /tmp/pifigo-installer-0.0.1-test4.tar.gz
+rm -rf /tmp/pifigo-installer-0.0.1-test4
+rm -rf /tmp/pifigo_linux_armv7 2>/dev/null
 
 # Print success message
 echo "Pifigo and Randomness-Provider have been successfully installed."
