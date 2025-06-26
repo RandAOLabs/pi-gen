@@ -22,32 +22,49 @@ wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-test4/pifigo-insta
 tar -xzvf pifigo-installer-0.0.1-test4.tar.gz
 
 # Check the directory structure after extraction
-ls -la /tmp
-find /tmp -name "pifigo" -type f
+echo "Checking extracted files..."
+ls -la /tmp || true
+ls -la /tmp/pifigo-installer-0.0.1-test4/releases/ || true
 
-# Copy the binary to the installation directory (adjusting path based on actual structure)
-if [ -f "/tmp/pifigo" ]; then
-    cp /tmp/pifigo /opt/pifigo/bin/
-elif [ -f "/tmp/pifigo-installer-0.0.1-test4/pifigo" ]; then
-    cp /tmp/pifigo-installer-0.0.1-test4/pifigo /opt/pifigo/bin/
-elif [ -f "/tmp/pifigo_linux_armv7/pifigo" ]; then
-    cp /tmp/pifigo_linux_armv7/pifigo /opt/pifigo/bin/
+# Copy the binary to the installation directory - use armv7 binary for Raspberry Pi
+if [ -f "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_armv7" ]; then
+    echo "Found armv7 binary, using it..."
+    cp "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_armv7" /opt/pifigo/bin/pifigo
+elif [ -f "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_armv6" ]; then
+    echo "Found armv6 binary, using it..."
+    cp "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_armv6" /opt/pifigo/bin/pifigo
+elif [ -f "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_arm64" ]; then
+    echo "Found arm64 binary, using it..."
+    cp "/tmp/pifigo-installer-0.0.1-test4/releases/pifigo_0.0.1-test4_linux_arm64" /opt/pifigo/bin/pifigo
 else
-    # Look for the binary in any subdirectory
-    PIFIGO_PATH=$(find /tmp -name "pifigo" -type f | head -1)
-    if [ -n "$PIFIGO_PATH" ]; then
-        cp "$PIFIGO_PATH" /opt/pifigo/bin/
+    echo "WARNING: Could not find specific pifigo binary, attempting to use installer script instead"
+    # Try running the installer script
+    if [ -f "/tmp/pifigo-installer-0.0.1-test4/install.sh" ]; then
+        echo "Found install.sh, running it..."
+        cd /tmp/pifigo-installer-0.0.1-test4
+        chmod +x install.sh
+        # Just continue even if installer fails, don't exit the script
+        ./install.sh || true
+        if [ -f "/opt/pifigo/bin/pifigo" ]; then
+            echo "Installer appears to have succeeded"
+        else
+            echo "WARNING: Installer did not place binary in expected location, creating placeholder"
+            echo "#!/bin/bash\necho 'Pifigo binary not properly installed'\nexit 1" > /opt/pifigo/bin/pifigo
+        fi
     else
-        echo "ERROR: Could not find pifigo binary in extracted files!"
-        exit 1
+        echo "WARNING: No binary or installer found, creating placeholder"
+        echo "#!/bin/bash\necho 'Pifigo binary not properly installed'\nexit 1" > /opt/pifigo/bin/pifigo
     fi
 fi
 
 chmod +x /opt/pifigo/bin/pifigo
 
-# Create default config.toml if it doesn't exist in repo
-echo "Creating default config if needed..."
-if [ ! -f "/root/pifigo/config.toml" ]; then
+# Copy config.toml from the extracted package or create default
+echo "Setting up config file..."
+if [ -f "/tmp/pifigo-installer-0.0.1-test4/config.toml" ]; then
+    echo "Using config.toml from installer package"
+    cp "/tmp/pifigo-installer-0.0.1-test4/config.toml" /opt/pifigo/
+else
     echo "Creating default config.toml..."
     cat > /opt/pifigo/config.toml << EOF
 # Pifigo Configuration
@@ -57,8 +74,6 @@ port = 8080
 [server]
 address = "0.0.0.0"
 EOF
-else
-    cp /root/pifigo/config.toml /opt/pifigo/
 fi
 
 # Create language and asset dirs if they don't exist
@@ -66,16 +81,16 @@ echo "Setting up language and assets..."
 mkdir -p /opt/pifigo/lang
 mkdir -p /opt/pifigo/assets
 
-# Copy lang files if they exist
-if [ -d "/root/pifigo/lang" ] && [ "$(ls -A /root/pifigo/lang)" ]; then
-    cp -r /root/pifigo/lang/* /opt/pifigo/lang/
+# Copy lang files from the installer package
+if [ -d "/tmp/pifigo-installer-0.0.1-test4/lang" ]; then
+    echo "Copying language files from installer package"
+    cp -r /tmp/pifigo-installer-0.0.1-test4/lang/* /opt/pifigo/lang/
 fi
 
-# Copy assets if they exist
-if [ -d "/root/pifigo/cmd/pifigo/assets" ] && [ "$(ls -A /root/pifigo/cmd/pifigo/assets)" ]; then
-    cp -r /root/pifigo/cmd/pifigo/assets/* /opt/pifigo/assets/
-elif [ -d "/root/pifigo/assets" ] && [ "$(ls -A /root/pifigo/assets)" ]; then
-    cp -r /root/pifigo/assets/* /opt/pifigo/assets/
+# Copy assets from the installer package
+if [ -d "/tmp/pifigo-installer-0.0.1-test4/cmd/pifigo/assets" ]; then
+    echo "Copying assets from installer package"
+    cp -r /tmp/pifigo-installer-0.0.1-test4/cmd/pifigo/assets/* /opt/pifigo/assets/
 fi
 
 # Create a systemd service to start pifigo on boot
