@@ -16,14 +16,38 @@ mkdir -p /opt/pifigo/bin
 mkdir -p /opt/pifigo/assets
 mkdir -p /opt/pifigo/lang
 
-# Download and extract the pifigo release
+# Download and extract the pifigo release - using the new URL directly
 cd /tmp
-wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-manual1/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
-tar -xzvf pifigo-v0.0.1-manual1_linux_armv7.tar.gz
-
-# Copy the binary to the installation directory
-cp /tmp/pifigo-v0.0.1-manual1_linux_armv7/pifigo /opt/pifigo/bin/
-chmod +x /opt/pifigo/bin/pifigo
+echo "Downloading pifigo installer..."
+if wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-test4/pifigo-installer-0.0.1-test4.tar.gz; then
+    echo "Successfully downloaded pifigo-installer-0.0.1-test4.tar.gz"
+    
+    # Extract the tarball
+    if tar -xzvf pifigo-installer-0.0.1-test4.tar.gz; then
+        echo "Successfully extracted pifigo-installer"
+        
+        # Navigate to extracted directory
+        extracted_dir=$(find /tmp -type d -name "pifigo-installer*" | head -1)
+        if [ -n "$extracted_dir" ]; then
+            cd "$extracted_dir"
+            
+            # Check if pifigo binary exists in this directory
+            if [ -f ./pifigo ]; then
+                echo "Found pifigo binary, installing to /opt/pifigo/bin/"
+                cp ./pifigo /opt/pifigo/bin/
+                chmod +x /opt/pifigo/bin/pifigo
+            else
+                echo "Warning: pifigo binary not found in extracted directory. Will attempt to use installer script instead."
+            fi
+        else
+            echo "Warning: Could not find extracted pifigo-installer directory"
+        fi
+    else
+        echo "Warning: Failed to extract pifigo-installer tarball"
+    fi
+else
+    echo "Warning: Failed to download pifigo-installer package. Continuing installation process."
+fi
 
 # Create default config.toml if it doesn't exist in repo
 echo "Creating default config if needed..."
@@ -86,44 +110,28 @@ systemctl enable pifigo.service
 rm -f /tmp/pifigo-v0.0.1-manual1_linux_armv7.tar.gz
 rm -rf /tmp/pifigo-v0.0.1-manual1_linux_armv7
 
-# Download and install the additional pifigo installer package
-echo "Attempting to install additional pifigo installer package..."
+# We already downloaded and installed the pifigo installer package above
+# No need to download it again
 cd /tmp
 
-# Try to download and install the additional package, but continue on error
-if wget https://github.com/ToddE/pifigo/releases/download/v0.0.1-test4/pifigo-installer-0.0.1-test4.tar.gz; then
-    echo "Successfully downloaded pifigo-installer-0.0.1-test4.tar.gz"
-    
-    # Extract the tarball
-    if tar -xzvf pifigo-installer-0.0.1-test4.tar.gz; then
-        echo "Successfully extracted pifigo-installer"
-        
-        # Navigate to extracted directory and run installer
-        cd pifigo-installer-0.0.1-test4 || cd "$(find . -type d -name "pifigo-installer*" | head -1)" || echo "Could not find installer directory"
-        
-        # Try to run the installer script
-        if [ -f ./install.sh ]; then
-            echo "Running installer script..."
-            chmod +x ./install.sh
-            if ./install.sh; then
-                echo "pifigo-installer successfully installed"
-            else
-                echo "Warning: pifigo-installer install.sh script returned non-zero exit code, continuing anyway"
-            fi
-        else
-            echo "Warning: install.sh not found in pifigo-installer directory, continuing anyway"
-        fi
+# Try to run the installer script if it exists
+extracted_dir=$(find /tmp -type d -name "pifigo-installer*" | head -1)
+if [ -n "$extracted_dir" ] && [ -f "$extracted_dir/install.sh" ]; then
+    echo "Running pifigo installer script..."
+    cd "$extracted_dir"
+    chmod +x ./install.sh
+    if ./install.sh; then
+        echo "pifigo-installer successfully installed"
     else
-        echo "Warning: Failed to extract pifigo-installer tarball, continuing anyway"
+        echo "Warning: pifigo-installer install.sh script returned non-zero exit code, continuing anyway"
     fi
 else
-    echo "Warning: Failed to download pifigo-installer package, continuing anyway"
+    echo "No installer script found or already executed"
 fi
 
 # Clean up installer files
 cd /tmp
 rm -f pifigo-installer-0.0.1-test4.tar.gz
-rm -rf pifigo-installer-0.0.1-test4
 rm -rf "$(find /tmp -type d -name "pifigo-installer*" 2>/dev/null)"
 
 # Create a record of installed components
